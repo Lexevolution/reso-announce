@@ -3,6 +3,10 @@ import { Client, Events, GatewayIntentBits } from 'discord.js';
 
 dotenv.config();
 
+//An in-memory map to keep track of which discord message links to which fedi post.
+//Used to find which fedi post to reply to when discord message is edited.
+let posts = new Map();
+
 const botClient = new Client({intents: [
     GatewayIntentBits.Guilds,
     GatewayIntentBits.GuildMessages,
@@ -18,7 +22,7 @@ botClient.on(Events.MessageCreate, async (message) => {
             announcement_type = "announcement";
             break;
         case "1171348449367687239": //#resonite-updates
-            announcement_type = "update"
+            announcement_type = "update";
             break;
         case "1171348477201088532": //#resonite-devlog
             announcement_type = "devlog";
@@ -59,7 +63,7 @@ botClient.on(Events.MessageCreate, async (message) => {
 
             console.log("ATTACHMENT IDS: " + JSON.stringify(attachment_ids));
         }
-        //Check for rapid succession of messages
+        //TODO: Check for rapid succession of messages
         
         const bodyBuilder = {
             "status": `Resonite ${announcement_type} post: ${message.content}\n\n#resonite`,
@@ -67,7 +71,7 @@ botClient.on(Events.MessageCreate, async (message) => {
             "visibility": "private"
         };
 
-        fetch("https://social.lexevo.net/api/v1/statuses", {
+        const res = await fetch("https://social.lexevo.net/api/v1/statuses", {
             method: "POST",
             headers: {
                 "Authorization": `Bearer ${process.env.FEDI_TOKEN}`,
@@ -75,11 +79,14 @@ botClient.on(Events.MessageCreate, async (message) => {
             },
             body: JSON.stringify(bodyBuilder)
         });
+        const resBody = await res.json();
+
+        posts.set(message.id, resBody.id);
     }
     
 });
 
-botClient.on("messageUpdate", (oldMessage, newMessage) => {
+botClient.on("messageUpdate", async (oldMessage, newMessage) => {
     let announcement_type = null;
     //Check to see if message was edited
     switch (newMessage.channelId){
@@ -87,7 +94,7 @@ botClient.on("messageUpdate", (oldMessage, newMessage) => {
             announcement_type = "announcement";
             break;
         case "1171348449367687239": //#resonite-updates
-            announcement_type = "update"
+            announcement_type = "update";
             break;
         case "1171348477201088532": //#resonite-devlog
             announcement_type = "devlog";
@@ -98,6 +105,24 @@ botClient.on("messageUpdate", (oldMessage, newMessage) => {
         default:
             break;
     }
-})
+
+    const bodyBuilder = {
+        "status": `Edited resonite ${announcement_type} post: ${newMessage.content}`,
+        "in_reply_to_id": posts.get(oldMessage.id),
+        "visibility": "private"
+    };
+
+    const res = await fetch("https://social.lexevo.net/api/v1/statuses", {
+        method: "POST",
+        headers: {
+            "Authorization": `Bearer ${process.env.FEDI_TOKEN}`,
+            "Content-Type": "application/json"
+        },
+        body: JSON.stringify(bodyBuilder)
+    });
+    const resBody = await res.json();
+
+    posts.set(newMessage.id, resBody.id);
+});
 
 botClient.login(process.env.DISCORD_TOKEN);
