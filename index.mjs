@@ -39,7 +39,6 @@ botClient.on(Events.MessageCreate, async (message) => {
         //Check to see if post has media attachment.
         if (message.attachments){
             for (const attachment of message.attachments.values()){
-                console.log(`DISCORD ATTACHMENTS: ${JSON.stringify(attachment)}`);
                 let data = new FormData();
 
                 let res = await fetch(attachment.url);
@@ -53,7 +52,6 @@ botClient.on(Events.MessageCreate, async (message) => {
                     body: data
                 });
 
-                console.log(`UPLOAD ATTEMPT RESULTS: ${JSON.stringify(res2)}`);
                 if (res2.status === 200){
                     const resJson = await res2.json();
                     attachment_ids.push(resJson.id);
@@ -61,14 +59,13 @@ botClient.on(Events.MessageCreate, async (message) => {
 
             }
 
-            console.log("ATTACHMENT IDS: " + JSON.stringify(attachment_ids));
         }
         //TODO: Check for rapid succession of messages
         
         const bodyBuilder = {
             "status": `Resonite ${announcement_type} post: ${message.content}\n\n#resonite`,
             "media_ids": attachment_ids,
-            "visibility": "private"
+            "visibility": "public"
         };
 
         const res = await fetch("https://social.lexevo.net/api/v1/statuses", {
@@ -109,7 +106,7 @@ botClient.on("messageUpdate", async (oldMessage, newMessage) => {
     const bodyBuilder = {
         "status": `Edited resonite ${announcement_type} post: ${newMessage.content}`,
         "in_reply_to_id": posts.get(oldMessage.id),
-        "visibility": "private"
+        "visibility": "unlisted"
     };
 
     const res = await fetch("https://social.lexevo.net/api/v1/statuses", {
