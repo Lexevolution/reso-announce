@@ -83,7 +83,7 @@ botClient.on(Events.MessageCreate, async (message) => {
     
 });
 
-botClient.on("messageUpdate", async (oldMessage, newMessage) => {
+botClient.on(Events.MessageUpdate, async (oldMessage, newMessage) => {
     let announcement_type = null;
     //Check to see if message was edited
     switch (newMessage.channelId){
@@ -103,23 +103,27 @@ botClient.on("messageUpdate", async (oldMessage, newMessage) => {
             break;
     }
 
-    const bodyBuilder = {
-        "status": `Edited resonite ${announcement_type} post: ${newMessage.content}`,
-        "in_reply_to_id": posts.get(oldMessage.id),
-        "visibility": "unlisted"
-    };
+    if (typeof announcement_type === "string"){
 
-    const res = await fetch("https://social.lexevo.net/api/v1/statuses", {
-        method: "POST",
-        headers: {
-            "Authorization": `Bearer ${process.env.FEDI_TOKEN}`,
-            "Content-Type": "application/json"
-        },
-        body: JSON.stringify(bodyBuilder)
-    });
-    const resBody = await res.json();
+        const bodyBuilder = {
+            "status": `Edited resonite ${announcement_type} post: ${newMessage.content}`,
+            "in_reply_to_id": posts.get(oldMessage.id),
+            "visibility": "unlisted"
+        };
 
-    posts.set(newMessage.id, resBody.id);
+        const res = await fetch("https://social.lexevo.net/api/v1/statuses", {
+            method: "POST",
+            headers: {
+                "Authorization": `Bearer ${process.env.FEDI_TOKEN}`,
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify(bodyBuilder)
+        });
+        const resBody = await res.json();
+    
+        posts.set(newMessage.id, resBody.id);
+    }
+    
 });
 
 botClient.login(process.env.DISCORD_TOKEN);
