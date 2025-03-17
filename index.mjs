@@ -5,6 +5,7 @@ dotenv.config();
 
 //An in-memory map to keep track of which discord message links to which fedi post.
 //Used to find which fedi post to reply to when discord message is edited.
+//Key: Discord message ID, Value: GtS message ID
 let posts = new Map();
 
 const botClient = new Client({intents: [
@@ -63,6 +64,7 @@ botClient.on(Events.MessageCreate, async (message) => {
         //TODO: Check for rapid succession of messages
         
         const bodyBuilder = {
+//            "local_only": true, //Uncomment this when testing to not federate.
             "status": `Resonite ${announcement_type} post: ${message.content}\n\n#resonite`,
             "media_ids": attachment_ids,
             "visibility": "public"
@@ -104,8 +106,9 @@ botClient.on(Events.MessageUpdate, async (oldMessage, newMessage) => {
     }
 
     if (typeof announcement_type === "string"){
+        // Keeping old code just in case
 
-        const bodyBuilder = {
+        /*const bodyBuilder = {
             "status": `Edited resonite ${announcement_type} post: ${newMessage.content}`,
             "in_reply_to_id": posts.get(oldMessage.id),
             "visibility": "unlisted"
@@ -119,8 +122,38 @@ botClient.on(Events.MessageUpdate, async (oldMessage, newMessage) => {
             },
             body: JSON.stringify(bodyBuilder)
         });
+        const resBody = await res.json();*/
+
+
+
+        //Editing a status and not including the 'media_ids' array unfortunately removes all of the media a post might have...
+        //I have to check the original post to see if there's any media, and copy it over to the edited post.
+
+        const originalStatus = await (await fetch(`https://social.lexevo.net/api/v1/statuses/${posts.get(oldMessage.id)}`, {
+            method: "GET",
+            headers: {
+                "Authorization": `Bearer ${process.env.FEDI_TOKEN}`
+            }
+        })).json();
+
+        //This is the copy part
+        const originalMediaIDs = originalStatus.media_attachments.map(originalAttachmentDetails => originalAttachmentDetails.id);
+
+        const reqBody = {
+            "status": `Resonite ${announcement_type} post: ${newMessage.content}\n\n#resonite`,
+            "media_ids": originalMediaIDs
+        }
+        const res = await fetch(`https://social.lexevo.net/api/v1/statuses/${posts.get(oldMessage.id)}`, {
+            method: "PUT",
+            headers: {
+                "Authorization": `Bearer ${process.env.FEDI_TOKEN}`,
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify(reqBody)
+        });
         const resBody = await res.json();
-    
+
+        //The edited discord message id changes, but the edited GtS status ID does not, so I only need to set/update the map.
         posts.set(newMessage.id, resBody.id);
     }
     
