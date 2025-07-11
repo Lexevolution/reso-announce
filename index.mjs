@@ -44,7 +44,10 @@ botClient.on(Events.MessageCreate, async (message) => {
 
                 let res = await fetch(attachment.url);
                 data.append("file", await res.blob());
-                data.append("description", attachment.description ?? "No ALT text available.")
+                if (attachment.description){
+                    data.append("description", attachment.description);
+                }
+                
 
                 let res2 = await fetch("https://social.lexevo.net/api/v2/media", {
                     method: "POST",
