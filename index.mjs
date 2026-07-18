@@ -49,7 +49,7 @@ botClient.on(Events.MessageCreate, async (message) => {
                 }
                 
 
-                let res2 = await fetch("https://social.lexevo.net/api/v2/media", {
+                let res2 = await fetch(`${process.env.RA_BASE_URL}/api/v2/media`, {
                     method: "POST",
                     headers: {
                         "Authorization": `Bearer ${process.env.FEDI_TOKEN}`
@@ -69,12 +69,12 @@ botClient.on(Events.MessageCreate, async (message) => {
         
         const bodyBuilder = {
 //            "local_only": true, //Uncomment this when testing to not federate.
-            "status": `Resonite ${announcement_type} post: ${message.content}\n\n#resonite`,
+            "status": `Resonite ${announcement_type} post:\n\n${message.content}\n\n#resonite`,
             "media_ids": attachment_ids,
             "visibility": "public"
         };
 
-        const res = await fetch("https://social.lexevo.net/api/v1/statuses", {
+        const res = await fetch(`${process.env.RA_BASE_URL}/api/v1/statuses`, {
             method: "POST",
             headers: {
                 "Authorization": `Bearer ${process.env.FEDI_TOKEN}`,
@@ -118,7 +118,7 @@ botClient.on(Events.MessageUpdate, async (oldMessage, newMessage) => {
             "visibility": "unlisted"
         };
 
-        const res = await fetch("https://social.lexevo.net/api/v1/statuses", {
+        const res = await fetch("${process.env.RA_BASE_URL}/api/v1/statuses", {
             method: "POST",
             headers: {
                 "Authorization": `Bearer ${process.env.FEDI_TOKEN}`,
@@ -133,7 +133,7 @@ botClient.on(Events.MessageUpdate, async (oldMessage, newMessage) => {
         //Editing a status and not including the 'media_ids' array unfortunately removes all of the media a post might have...
         //I have to check the original post to see if there's any media, and copy it over to the edited post.
 
-        const originalStatus = await (await fetch(`https://social.lexevo.net/api/v1/statuses/${posts.get(oldMessage.id)}`, {
+        const originalStatus = await (await fetch(`${process.env.RA_BASE_URL}/api/v1/statuses/${posts.get(oldMessage.id)}`, {
             method: "GET",
             headers: {
                 "Authorization": `Bearer ${process.env.FEDI_TOKEN}`
@@ -144,10 +144,10 @@ botClient.on(Events.MessageUpdate, async (oldMessage, newMessage) => {
         const originalMediaIDs = originalStatus.media_attachments.map(originalAttachmentDetails => originalAttachmentDetails.id);
 
         const reqBody = {
-            "status": `Resonite ${announcement_type} post: ${newMessage.content}\n\n#resonite`,
+            "status": `Resonite ${announcement_type} post:\n\n${newMessage.content}\n\n#resonite`,
             "media_ids": originalMediaIDs
         }
-        const res = await fetch(`https://social.lexevo.net/api/v1/statuses/${posts.get(oldMessage.id)}`, {
+        const res = await fetch(`${process.env.RA_BASE_URL}/api/v1/statuses/${posts.get(oldMessage.id)}`, {
             method: "PUT",
             headers: {
                 "Authorization": `Bearer ${process.env.FEDI_TOKEN}`,
